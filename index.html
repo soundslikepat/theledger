@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Ledger</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --paper:#ece7dc;
+    --paper-dim:#e2ddce;
+    --ink:#17140f;
+    --ink-soft:#4a4638;
+    --line:#c9c2ae;
+    --stamp:#c33d2e;
+    --stamp-dim:#c33d2e22;
+    --steel:#3e5c6b;
+    --steel-dim:#3e5c6b1f;
+    --brass:#8a6d3b;
+    --brass-dim:#8a6d3b22;
+    --olive:#6b7052;
+    --white:#faf8f2;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:'Archivo',sans-serif;}
+  body{min-height:100vh;}
+
+  .app{display:flex;min-height:100vh;}
+
+  /* ---------- sidebar ---------- */
+  .rail{
+    width:230px;flex:none;background:var(--ink);color:var(--paper);
+    display:flex;flex-direction:column;padding:22px 0 16px;
+    position:sticky;top:0;height:100vh;
+  }
+  .rail-brand{
+    font-family:'Archivo Black',sans-serif;font-size:20px;letter-spacing:.5px;
+    padding:0 20px 4px;line-height:1.1;
+  }
+  .rail-sub{
+    padding:0 20px 20px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    color:#ece7dc99;letter-spacing:.06em;border-bottom:1px solid #ffffff22;margin-bottom:14px;
+  }
+  .rail-tab{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:13px 20px;cursor:pointer;font-size:13.5px;font-weight:600;
+    border-left:3px solid transparent;color:#ece7dccc;letter-spacing:.02em;
+  }
+  .rail-tab:hover{background:#ffffff0c;color:var(--white);}
+  .rail-tab.active{background:#ffffff14;border-left-color:var(--tab-accent,var(--stamp));color:var(--white);}
+  .rail-tab .count{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;background:#ffffff1a;
+    padding:2px 7px;border-radius:2px;min-width:22px;text-align:center;
+  }
+  .rail-foot{margin-top:auto;padding:16px 20px 0;border-top:1px solid #ffffff22;}
+  .rail-btn{
+    width:100%;background:none;border:1px solid #ffffff3a;color:#ece7ddcc;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;padding:9px 10px;
+    border-radius:2px;cursor:pointer;letter-spacing:.03em;margin-top:8px;text-align:left;
+  }
+  .rail-btn:hover{border-color:#ffffff70;color:var(--white);}
+
+  /* ---------- main ---------- */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .ticker{
+    background:var(--stamp);color:var(--white);font-family:'IBM Plex Mono',monospace;
+    font-size:11px;letter-spacing:.08em;padding:6px 24px;white-space:nowrap;overflow:hidden;
+    text-transform:uppercase;
+  }
+  .topbar{
+    padding:20px 28px 14px;border-bottom:1px solid var(--line);
+    display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .topbar h1{
+    font-family:'Archivo Black',sans-serif;font-size:26px;margin:0 0 4px;
+    text-transform:uppercase;letter-spacing:.01em;
+  }
+  .topbar .desc{font-size:12.5px;color:var(--ink-soft);max-width:520px;line-height:1.4;}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .btn{
+    font-family:'Archivo',sans-serif;font-weight:600;font-size:12.5px;
+    padding:9px 16px;border-radius:2px;border:1.5px solid var(--ink);
+    background:transparent;color:var(--ink);cursor:pointer;letter-spacing:.01em;
+  }
+  .btn:hover{background:var(--ink);color:var(--paper);}
+  .btn.primary{background:var(--ink);color:var(--paper);}
+  .btn.primary:hover{background:var(--stamp);border-color:var(--stamp);}
+
+  .toolbar{
+    display:flex;gap:10px;align-items:center;padding:14px 28px;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);background:var(--paper-dim);
+  }
+  .search{
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:8px 12px;
+    border:1.5px solid var(--line);border-radius:2px;background:var(--white);
+    min-width:220px;flex:1;max-width:340px;color:var(--ink);
+  }
+  .search:focus{outline:none;border-color:var(--ink);}
+  .chip{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 11px;
+    border:1.5px solid var(--line);border-radius:20px;background:var(--white);
+    cursor:pointer;color:var(--ink-soft);letter-spacing:.02em;
+  }
+  .chip.on{background:var(--ink);border-color:var(--ink);color:var(--paper);}
+  .spacer{flex:1;}
+  .sortsel{
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:7px 10px;
+    border:1.5px solid var(--line);border-radius:2px;background:var(--white);color:var(--ink);
+  }
+
+  .content{flex:1;padding:8px 28px 40px;overflow:auto;}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;margin-top:14px;}
+  thead th{
+    text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);
+    padding:8px 10px;border-bottom:1.5px solid var(--ink);white-space:nowrap;
+  }
+  tbody tr{border-bottom:1px solid var(--line);cursor:pointer;}
+  tbody tr:hover{background:var(--white);}
+  tbody td{padding:11px 10px;font-size:13px;vertical-align:middle;}
+  td.company{font-weight:700;}
+  td.mono{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);}
+  .tag{
+    display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;
+    padding:3px 8px;border-radius:2px;letter-spacing:.03em;text-transform:uppercase;
+    background:var(--accent-dim,var(--steel-dim));color:var(--accent,var(--steel));
+    font-weight:600;
+  }
+  .status{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
+  .stamp-badge{
+    display:inline-flex;align-items:center;gap:5px;transform:rotate(-3deg);
+    border:2px solid var(--stamp);color:var(--stamp);border-radius:3px;
+    padding:2px 7px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;
+    letter-spacing:.04em;
+  }
+  .row-actions{display:flex;gap:6px;justify-content:flex-end;}
+  .icon-btn{
+    background:none;border:1px solid var(--line);border-radius:2px;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 8px;cursor:pointer;color:var(--ink-soft);
+  }
+  .icon-btn:hover{border-color:var(--ink);color:var(--ink);}
+
+  .empty{
+    margin-top:60px;text-align:center;color:var(--ink-soft);
+  }
+  .empty h3{font-family:'Archivo Black',sans-serif;font-size:18px;color:var(--ink);margin-bottom:6px;text-transform:uppercase;}
+  .empty p{font-size:12.5px;max-width:360px;margin:0 auto 16px;line-height:1.5;}
+
+  /* modal */
+  .overlay{
+    position:fixed;inset:0;background:#17140fcc;display:none;align-items:flex-start;
+    justify-content:center;padding:5vh 20px;z-index:50;overflow:auto;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    background:var(--paper);border:1.5px solid var(--ink);border-radius:3px;
+    width:100%;max-width:560px;padding:26px 28px 24px;
+  }
+  .modal h2{
+    font-family:'Archivo Black',sans-serif;font-size:18px;margin:0 0 4px;text-transform:uppercase;
+  }
+  .modal .modal-sub{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin-bottom:18px;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field.full{grid-column:1/-1;}
+  .field label{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+  .field input,.field select,.field textarea{
+    font-family:'Archivo',sans-serif;font-size:13px;padding:8px 10px;
+    border:1.5px solid var(--line);border-radius:2px;background:var(--white);color:var(--ink);
+  }
+  .field textarea{resize:vertical;min-height:56px;font-family:'IBM Plex Mono',monospace;font-size:12px;}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--ink);}
+  .star-pick{display:flex;gap:4px;}
+  .star-pick span{font-size:20px;cursor:pointer;color:var(--line);}
+  .star-pick span.on{color:var(--stamp);}
+  .modal-actions{display:flex;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:1px solid var(--line);}
+  .modal-actions .left{display:flex;gap:8px;}
+
+  ::selection{background:var(--stamp);color:var(--white);}
+
+  @media (max-width:820px){
+    .rail{width:100%;height:auto;position:relative;flex-direction:row;overflow-x:auto;padding:14px 0;}
+    .rail-brand,.rail-sub,.rail-foot{display:none;}
+    .rail-tab{padding:10px 16px;white-space:nowrap;border-left:none;border-bottom:3px solid transparent;}
+    .rail-tab.active{border-bottom-color:var(--tab-accent,var(--stamp));}
+    .app{flex-direction:column;}
+    table{font-size:12px;}
+    thead{display:none;}
+    tbody tr{display:block;padding:10px 0;}
+    tbody td{display:flex;justify-content:space-between;padding:4px 4px;}
+    tbody td:before{content:attr(data-label);font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-soft);text-transform:uppercase;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="rail">
+    <div class="rail-brand">The Ledger</div>
+    <div class="rail-sub">CONTACT DIRECTORY &mdash; V1</div>
+    <div class="rail-tab active" data-cat="postprod" style="--tab-accent:#3e5c6b">
+      <span>Post Production</span><span class="count" id="count-postprod">0</span>
+    </div>
+    <div class="rail-tab" data-cat="labels" style="--tab-accent:#c33d2e">
+      <span>Labels &amp; Mgmt</span><span class="count" id="count-labels">0</span>
+    </div>
+    <div class="rail-tab" data-cat="publishing" style="--tab-accent:#8a6d3b">
+      <span>Publishing JVs</span><span class="count" id="count-publishing">0</span>
+    </div>
+    <div class="rail-foot">
+      <button class="rail-btn" id="export-btn">&darr; Export CSV (this list)</button>
+      <button class="rail-btn" id="export-all-btn">&darr; Export CSV (all)</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="ticker" id="ticker">LOADING LEDGER &middot; PERSONAL DATA, STORED FOR YOU ONLY &middot; ADD A COMPANY TO BEGIN &middot;</div>
+
+    <div class="topbar">
+      <div>
+        <h1 id="cat-title">Post Production</h1>
+        <div class="desc" id="cat-desc">US and European post houses, editorial, VFX, and finishing companies.</div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="add-btn">+ New Entry</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input class="search" id="search" placeholder="Search company, contact, city, focus...">
+      <div id="region-chips" style="display:flex;gap:8px;">
+        <div class="chip on" data-region="all">All Regions</div>
+        <div class="chip" data-region="US">US</div>
+        <div class="chip" data-region="Europe">Europe</div>
+      </div>
+      <div id="genre-chips" style="display:none;gap:8px;"></div>
+      <div class="spacer"></div>
+      <select class="sortsel" id="sort-sel">
+        <option value="priority">Sort: Priority</option>
+        <option value="company">Sort: Company A&ndash;Z</option>
+        <option value="status">Sort: Status</option>
+        <option value="followup">Sort: Follow-up date</option>
+      </select>
+    </div>
+
+    <div class="content">
+      <table id="data-table">
+        <thead>
+          <tr id="thead-row"></tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="empty-state" style="display:none;">
+        <h3>Nothing filed yet</h3>
+        <p id="empty-copy">Add the first company in this list &mdash; contact, priority, and status all live in one row you can update anytime.</p>
+        <button class="btn primary" id="empty-add-btn">+ New Entry</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modal-title">New Entry</h2>
+    <div class="modal-sub" id="modal-sub">POST PRODUCTION</div>
+    <div class="form-grid" id="form-grid"></div>
+    <div class="modal-actions">
+      <div class="left">
+        <button class="btn" id="cancel-btn">Cancel</button>
+        <button class="btn" id="delete-btn" style="display:none;border-color:var(--stamp);color:var(--stamp);">Delete</button>
+      </div>
+      <button class="btn primary" id="save-btn">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CATS = {
+  postprod: {
+    label:'Post Production', accent:'#3e5c6b', accentDim:'#3e5c6b1f',
+    desc:'US and European post houses, editorial, VFX, and finishing companies.',
+    emptyCopy:'Add the first post house &mdash; contact, priority, and status all live in one row you can update anytime.',
+    cols:['Company','City / Region','Focus','Contact','Priority','Status',''],
+  },
+  labels: {
+    label:'Labels & Mgmt', accent:'#c33d2e', accentDim:'#c33d2e22',
+    desc:'Indie record labels and management companies across hip-hop, metal/rock/grunge, and electronic/house. US & Europe.',
+    emptyCopy:'Add the first label or management company &mdash; tag it by genre so you can filter the list as it grows.',
+    cols:['Company','City / Region','Genre','Contact','Priority','Status',''],
+  },
+  publishing: {
+    label:'Publishing JVs', accent:'#8a6d3b', accentDim:'#8a6d3b22',
+    desc:'Indie publishers running a JV or imprint deal with a major or mid-tier rights holder.',
+    emptyCopy:'Add the first imprint &mdash; note who the deal is with, so the parent relationship is always visible.',
+    cols:['Company','City / Region','Rights Holder','Contact','Priority','Status',''],
+  }
+};
+const GENRES = ['Hip-Hop','Metal/Rock/Grunge','Electronic/House','Other'];
+const STATUSES = ['Cold','Contacted','Replied','Meeting','Client','Passed'];
+
+let DB = { postprod: [], labels: [], publishing: [] };
+let active = 'postprod';
+let filters = { region:'all', genre:null, search:'' };
+let editingId = null;
+
+const SEED_POSTPROD = [
+  {company:'Company 3', city:'Los Angeles', region:'US', focus:'Features / TV / Commercials', contact:'Meghan Lang', title:'SVP, Global Managing Director', email:'mlang@company3.com', linkedin:'', priority:5, status:'Cold', lastContact:'', followUp:'', notes:'Great commercial & feature pipeline.'},
+  {company:'Harbor', city:'Los Angeles', region:'US', focus:'Film / TV / Advertising', contact:'Carissa Clark', title:'VP Sales', email:'entertainment@harborpicturecompany.com', linkedin:'', priority:5, status:'Cold', lastContact:'', followUp:'', notes:'Multiple offices, huge studio footprint.'},
+  {company:'Whitehouse Post', city:'Los Angeles', region:'US', focus:'Commercial Editorial', contact:'Ximena Aguirre', title:'Executive Producer', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Strong agency relationships.'},
+  {company:'Picture Shop', city:'Los Angeles', region:'US', focus:'Features / Episodic', contact:'Client Services', title:'', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'High-end finishing.'},
+  {company:'Formosa Group', city:'Los Angeles', region:'US', focus:'Audio Post', contact:'Business Development', title:'', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Constantly working with producers.'},
+  {company:'Company 3', city:'New York', region:'US', focus:'Commercials / Features', contact:'Kristin Engdahl', title:'Head of Production', email:'kengdahl@company3.com', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Excellent NYC entry point.'},
+  {company:'Harbor', city:'New York', region:'US', focus:'Entertainment Post', contact:'Carissa Clark', title:'VP Sales', email:'entertainment@harborpicturecompany.com', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Multi-city relationship opportunity.'},
+  {company:'Hog Farm Post', city:'New York', region:'US', focus:'Commercial / Music Videos', contact:'Alex Lose', title:'Executive Producer', email:'alex@hogfarm.com', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Boutique with excellent creative reputation.'},
+  {company:'Gigantic Studios', city:'New York', region:'US', focus:'Documentary / Streaming', contact:'Executive Producer', title:'', email:'info@giganticstudios.com', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Great documentary work.'},
+  {company:'Whitehouse Post', city:'New York', region:'US', focus:'Editorial', contact:'Ryan Smith', title:'Executive Producer', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Large commercial client base.'},
+  {company:'Moonshine Post', city:'Atlanta', region:'US', focus:'Features / TV', contact:'Drew Sawyer', title:'Founder', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Fast-growing Atlanta market.'},
+  {company:'Artjail', city:'NYC / Toronto', region:'US', focus:'Commercial VFX', contact:'John Skeffington', title:'Managing Director', email:'john@artjail.com', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Premium advertising work.'},
+];
+
+const SEED_LABELS = [
+  {company:'Mello Music Group', city:'Tucson / Nashville', region:'US', genre:'Hip-Hop', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Boutique production-forward indie hip-hop label. Verify current A&R contact via label site.'},
+  {company:"Fool's Gold Records", city:'New York / Los Angeles', region:'US', genre:'Hip-Hop', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:"Indie hip-hop/dance-adjacent label founded by A-Trak. Verify current contact via label site."},
+  {company:'Rostrum Records', city:'Pittsburgh / Los Angeles', region:'US', genre:'Hip-Hop', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Indie hip-hop label, early home to Mac Miller and Wiz Khalifa. Verify current contact.'},
+  {company:'Duck Down Music', city:'New York', region:'US', genre:'Hip-Hop', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Long-running indie hip-hop label (Boot Camp Clik lineage). Verify current contact.'},
+  {company:'Quality Control Music', city:'Atlanta', region:'US', genre:'Hip-Hop', contact:'', title:'', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Label/management hybrid with a major-affiliated recorded-music partnership. Verify current structure and contact.'},
+  {company:'High Focus Records', city:'London', region:'Europe', genre:'Hip-Hop', contact:'', title:'', email:'', linkedin:'', priority:2, status:'Cold', lastContact:'', followUp:'', notes:'Independent UK underground hip-hop label. Verify current contact.'},
+  {company:'Relapse Records', city:'Philadelphia', region:'US', genre:'Metal/Rock/Grunge', contact:'', title:'', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Long-running indie extreme metal label. Verify current A&R/business contact.'},
+  {company:'Metal Blade Records', city:'Los Angeles', region:'US', genre:'Metal/Rock/Grunge', contact:'', title:'', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Established indie metal label. Verify current contact.'},
+  {company:'Southern Lord', city:'Los Angeles', region:'US', genre:'Metal/Rock/Grunge', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Doom/sludge/drone indie label run by Greg Anderson. Verify current contact.'},
+  {company:'Epitaph Records', city:'Los Angeles', region:'US', genre:'Metal/Rock/Grunge', contact:'', title:'', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Major independent punk/rock label founded by Brett Gurewitz. Verify current contact.'},
+  {company:'Sub Pop Records', city:'Seattle', region:'US', genre:'Metal/Rock/Grunge', contact:'', title:'', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Legendary Seattle grunge/indie rock label. Verify current contact.'},
+  {company:'Suicide Squeeze Records', city:'Seattle', region:'US', genre:'Metal/Rock/Grunge', contact:'', title:'', email:'', linkedin:'', priority:2, status:'Cold', lastContact:'', followUp:'', notes:'Indie rock label. Verify current contact.'},
+  {company:'Sargent House', city:'Los Angeles', region:'US', genre:'Metal/Rock/Grunge', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Management-and-label hybrid working alt/rock artists. Verify current contact.'},
+  {company:'Season of Mist', city:'Paris', region:'Europe', genre:'Metal/Rock/Grunge', contact:'', title:'', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'French independent extreme/avant-garde metal label. Verify current contact.'},
+  {company:'Napalm Records', city:'Vienna', region:'Europe', genre:'Metal/Rock/Grunge', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Austrian independent rock/metal label. Verify current contact.'},
+  {company:'Nuclear Blast', city:'Donzdorf', region:'Europe', genre:'Metal/Rock/Grunge', contact:'', title:'', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Major independent German metal label with a large international roster. Verify current contact.'},
+  {company:'Defected Records', city:'London', region:'Europe', genre:'Electronic/House', contact:'', title:'', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Leading independent house label. Verify current contact.'},
+  {company:'Toolroom Records', city:'London', region:'Europe', genre:'Electronic/House', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Independent house/tech-house label. Verify current contact.'},
+  {company:'Anjunadeep', city:'London', region:'Europe', genre:'Electronic/House', contact:'', title:'', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Melodic house/techno indie label under the Anjunabeats group. Verify current contact.'},
+  {company:'Crosstown Rebels', city:'London', region:'Europe', genre:'Electronic/House', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:"Independent house/techno label run by Damian Lazarus. Verify current contact."},
+  {company:'Kompakt', city:'Cologne', region:'Europe', genre:'Electronic/House', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Independent minimal/techno label and record shop. Verify current contact.'},
+  {company:'Innervisions', city:'Berlin', region:'Europe', genre:'Electronic/House', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Independent house/techno label. Verify current contact.'},
+  {company:'Dirtybird', city:'Los Angeles / San Francisco', region:'US', genre:'Electronic/House', contact:'', title:'', email:'', linkedin:'', priority:4, status:'Cold', lastContact:'', followUp:'', notes:'Independent bass-house label founded by Claude VonStroke. Verify current contact.'},
+  {company:'Three Six Zero', city:'Los Angeles / London', region:'US', genre:'Other', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Management company spanning electronic and hip-hop artists. Verify current contact.'},
+];
+
+const SEED_PUBLISHING = [
+  {company:'Lilly Raye Music', city:'', region:'Europe', rightsHolder:'Warner Chappell Music', dealType:'JV', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Management/publishing company; strategic JV with Warner Chappell established 2020, expanded 2023, focused on Asia/Europe/US collaborations.'},
+  {company:'Verse 2 Music', city:'Nashville', region:'US', rightsHolder:'Sony Music Publishing Nashville', dealType:'JV', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:'Led by Kane Brown and Kent Earls; renewed partnership with Sony Music Publishing Nashville.'},
+  {company:'Mosaert', city:'Brussels', region:'Europe', rightsHolder:'Warner Chappell Music', dealType:'Admin', contact:'', title:'', email:'', linkedin:'', priority:3, status:'Cold', lastContact:'', followUp:'', notes:"Stromae's independent label/publishing company; worldwide administration deal with Warner Chappell (originally signed 2022, renewed 2026)."},
+  {company:'PopIndia (Reservoir Media)', city:'Mumbai', region:'', rightsHolder:'Reservoir Media', dealType:'Imprint', contact:'', title:'', email:'', linkedin:'', priority:2, status:'Cold', lastContact:'', followUp:'', notes:'Reservoir Media\u2019s India-focused subsidiary/imprint; first catalogue deal was the Musicraft Entertainment catalogue.'},
+];
+
+function uid(){ return 'e' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+
+const API = '/.netlify/functions/ledger';
+
+async function loadDB(){
+  try{
+    const res = await fetch(API);
+    if(res.ok){
+      const data = await res.json();
+      if(data && (data.postprod || data.labels || data.publishing)){
+        DB = data;
+      } else {
+        DB.postprod = SEED_POSTPROD.map(e=>({...e,id:uid()}));
+        DB.labels = SEED_LABELS.map(e=>({...e,id:uid()}));
+        DB.publishing = SEED_PUBLISHING.map(e=>({...e,id:uid()}));
+        await saveDB();
+      }
+    } else {
+      throw new Error('Ledger API returned ' + res.status);
+    }
+  }catch(err){
+    console.error('Load error:', err);
+    document.getElementById('ticker').textContent =
+      'COULD NOT REACH THE LEDGER API \u2014 CHECK THAT YOUR NETLIFY FUNCTION IS DEPLOYED \u00b7 SEE README \u00b7';
+    DB.postprod = SEED_POSTPROD.map(e=>({...e,id:uid()}));
+    DB.labels = SEED_LABELS.map(e=>({...e,id:uid()}));
+    DB.publishing = SEED_PUBLISHING.map(e=>({...e,id:uid()}));
+  }
+  ['postprod','labels','publishing'].forEach(c=>{ if(!Array.isArray(DB[c])) DB[c]=[]; });
+  render();
+}
+
+async function saveDB(){
+  try{
+    const res = await fetch(API, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(DB)
+    });
+    if(!res.ok) console.error('Save failed with status', res.status);
+  }catch(err){ console.error('Storage error:', err); }
+}
+
+function switchTab(cat){
+  active = cat;
+  filters = { region:'all', genre:null, search:'' };
+  document.getElementById('search').value='';
+  document.querySelectorAll('.rail-tab').forEach(t=>t.classList.toggle('active', t.dataset.cat===cat));
+  document.querySelectorAll('#region-chips .chip').forEach(c=>c.classList.toggle('on', c.dataset.region==='all'));
+  const cfg = CATS[cat];
+  document.getElementById('cat-title').textContent = cfg.label;
+  document.getElementById('cat-desc').textContent = cfg.desc;
+  document.getElementById('empty-copy').innerHTML = cfg.emptyCopy;
+  const genreWrap = document.getElementById('genre-chips');
+  if(cat==='labels'){
+    genreWrap.style.display='flex';
+    genreWrap.innerHTML = GENRES.map(g=>`<div class="chip" data-genre="${g}">${g}</div>`).join('');
+    genreWrap.querySelectorAll('.chip').forEach(c=>c.addEventListener('click', ()=>{
+      const g = c.dataset.genre;
+      filters.genre = filters.genre===g ? null : g;
+      genreWrap.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on', x.dataset.genre===filters.genre));
+      render();
+    }));
+  } else {
+    genreWrap.style.display='none'; genreWrap.innerHTML='';
+  }
+  render();
+}
+
+function matches(e){
+  if(filters.region!=='all' && e.region!==filters.region) return false;
+  if(active==='labels' && filters.genre && e.genre!==filters.genre) return false;
+  if(filters.search){
+    const s = filters.search.toLowerCase();
+    const hay = [e.company,e.contact,e.city,e.focus,e.genre,e.rightsHolder,e.notes].join(' ').toLowerCase();
+    if(!hay.includes(s)) return false;
+  }
+  return true;
+}
+
+function sortRows(rows){
+  const sortBy = document.getElementById('sort-sel').value;
+  const copy = [...rows];
+  if(sortBy==='priority') copy.sort((a,b)=>(b.priority||0)-(a.priority||0));
+  else if(sortBy==='company') copy.sort((a,b)=>(a.company||'').localeCompare(b.company||''));
+  else if(sortBy==='status') copy.sort((a,b)=>STATUSES.indexOf(a.status)-STATUSES.indexOf(b.status));
+  else if(sortBy==='followup') copy.sort((a,b)=>(a.followUp||'9999').localeCompare(b.followUp||'9999'));
+  return copy;
+}
+
+function render(){
+  const cfg = CATS[active];
+  document.documentElement.style.setProperty('--accent', cfg.accent);
+  Object.keys(CATS).forEach(c=>{ document.getElementById('count-'+c).textContent = DB[c].length; });
+
+  const thead = document.getElementById('thead-row');
+  thead.innerHTML = cfg.cols.map(c=>`<th>${c}</th>`).join('');
+
+  let rows = DB[active].filter(matches);
+  rows = sortRows(rows);
+
+  const tbody = document.getElementById('tbody');
+  const emptyState = document.getElementById('empty-state');
+  const table = document.getElementById('data-table');
+
+  if(rows.length===0){
+    table.style.display='none'; emptyState.style.display='block';
+    tbody.innerHTML='';
+    updateTicker();
+    return;
+  }
+  table.style.display='table'; emptyState.style.display='none';
+
+  tbody.innerHTML = rows.map(e=>{
+    const stars = '&#9733;'.repeat(e.priority||0) + '&#9734;'.repeat(5-(e.priority||0));
+    const middleCol = active==='labels' ? (e.genre? `<span class="tag" style="--accent:${cfg.accent};--accent-dim:${cfg.accentDim}">${e.genre}</span>` : '&mdash;')
+      : active==='publishing' ? (e.rightsHolder||'&mdash;')
+      : (e.focus||'&mdash;');
+    return `<tr data-id="${e.id}">
+      <td class="company" data-label="Company">${escapeHtml(e.company)}</td>
+      <td class="mono" data-label="Location">${escapeHtml(e.city||'')}${e.region?` <span style="color:var(--ink-soft)">(${e.region})</span>`:''}</td>
+      <td data-label="${cfg.cols[2]}">${middleCol}</td>
+      <td data-label="Contact">${escapeHtml(e.contact||'')}${e.title?`<br><span class="mono" style="font-size:11px;">${escapeHtml(e.title)}</span>`:''}</td>
+      <td data-label="Priority"><span class="stamp-badge">${stars}</span></td>
+      <td class="status" data-label="Status">${escapeHtml(e.status||'Cold')}</td>
+      <td><div class="row-actions"><button class="icon-btn" data-edit="${e.id}">Edit</button></div></td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('tr').forEach(tr=>{
+    tr.addEventListener('click',(ev)=>{
+      if(ev.target.dataset.edit) return;
+      openModal(tr.dataset.id);
+    });
+  });
+  tbody.querySelectorAll('[data-edit]').forEach(btn=>{
+    btn.addEventListener('click',(ev)=>{ ev.stopPropagation(); openModal(btn.dataset.edit); });
+  });
+
+  updateTicker();
+}
+
+function escapeHtml(s){
+  return String(s??'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function updateTicker(){
+  const total = DB.postprod.length + DB.labels.length + DB.publishing.length;
+  const cfg = CATS[active];
+  document.getElementById('ticker').textContent =
+    `${total} COMPANIES ON FILE \u00b7 VIEWING ${cfg.label.toUpperCase()} (${DB[active].length}) \u00b7 STORED PRIVATELY FOR YOU \u00b7`;
+}
+
+/* ---- modal ---- */
+function fieldsFor(cat){
+  const common = [
+    {k:'company', label:'Company', type:'text', full:true, required:true},
+    {k:'city', label:'City', type:'text'},
+    {k:'region', label:'Region', type:'select', options:['US','Europe']},
+  ];
+  const specific = cat==='labels'
+    ? [{k:'genre', label:'Genre', type:'select', options:GENRES}]
+    : cat==='publishing'
+    ? [{k:'rightsHolder', label:'Rights Holder (Major/Mid-Tier)', type:'text', full:true},
+       {k:'dealType', label:'Deal Type', type:'select', options:['JV','Imprint','Distribution','Admin']}]
+    : [{k:'focus', label:'Focus', type:'text', full:true}];
+  const contact = [
+    {k:'contact', label:'Contact Name', type:'text'},
+    {k:'title', label:'Title', type:'text'},
+    {k:'email', label:'Email', type:'text'},
+    {k:'linkedin', label:'LinkedIn', type:'text'},
+  ];
+  const tracking = [
+    {k:'status', label:'Status', type:'select', options:STATUSES},
+    {k:'priority', label:'Priority', type:'stars'},
+    {k:'lastContact', label:'Last Contact', type:'date'},
+    {k:'followUp', label:'Follow-up', type:'date'},
+    {k:'notes', label:'Notes', type:'textarea', full:true},
+  ];
+  return [...common, ...specific, ...contact, ...tracking];
+}
+
+function openModal(id){
+  editingId = id;
+  const cfg = CATS[active];
+  const entry = id ? DB[active].find(e=>e.id===id) : {};
+  document.getElementById('modal-title').textContent = id ? 'Edit Entry' : 'New Entry';
+  document.getElementById('modal-sub').textContent = cfg.label.toUpperCase();
+  document.getElementById('delete-btn').style.display = id ? 'inline-block' : 'none';
+
+  const grid = document.getElementById('form-grid');
+  grid.innerHTML = '';
+  fieldsFor(active).forEach(f=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'field' + (f.full? ' full':'');
+    const label = document.createElement('label');
+    label.textContent = f.label;
+    wrap.appendChild(label);
+    if(f.type==='select'){
+      const sel = document.createElement('select');
+      sel.dataset.k = f.k;
+      sel.innerHTML = '<option value="">&mdash;</option>' + f.options.map(o=>`<option value="${o}" ${entry[f.k]===o?'selected':''}>${o}</option>`).join('');
+      wrap.appendChild(sel);
+    } else if(f.type==='textarea'){
+      const ta = document.createElement('textarea');
+      ta.dataset.k = f.k;
+      ta.value = entry[f.k] || '';
+      wrap.appendChild(ta);
+    } else if(f.type==='stars'){
+      const starWrap = document.createElement('div');
+      starWrap.className='star-pick';
+      starWrap.dataset.k = f.k;
+      let val = entry[f.k] || 0;
+      for(let i=1;i<=5;i++){
+        const s = document.createElement('span');
+        s.textContent = '\u2605';
+        s.dataset.val = i;
+        if(i<=val) s.classList.add('on');
+        s.addEventListener('click', ()=>{
+          val = (val===i) ? i-1 : i;
+          starWrap.dataset.value = val;
+          [...starWrap.children].forEach((c,idx)=>c.classList.toggle('on', idx < val));
+        });
+        starWrap.appendChild(s);
+      }
+      starWrap.dataset.value = val;
+      wrap.appendChild(starWrap);
+    } else {
+      const inp = document.createElement('input');
+      inp.type = f.type==='date' ? 'date' : 'text';
+      inp.dataset.k = f.k;
+      inp.value = entry[f.k] || '';
+      if(f.type==='date' && entry[f.k]){ inp.value = entry[f.k]; }
+      wrap.appendChild(inp);
+    }
+    grid.appendChild(wrap);
+  });
+
+  document.getElementById('overlay').classList.add('show');
+}
+
+function closeModal(){
+  document.getElementById('overlay').classList.remove('show');
+  editingId = null;
+}
+
+async function saveEntry(){
+  const grid = document.getElementById('form-grid');
+  const data = {};
+  grid.querySelectorAll('[data-k]').forEach(el=>{
+    if(el.classList.contains('star-pick')){
+      data[el.dataset.k] = parseInt(el.dataset.value||'0',10);
+    } else {
+      data[el.dataset.k] = el.value;
+    }
+  });
+  if(!data.company || !data.company.trim()){
+    alert('Company name is required.');
+    return;
+  }
+  if(editingId){
+    const idx = DB[active].findIndex(e=>e.id===editingId);
+    if(idx>-1) DB[active][idx] = {...DB[active][idx], ...data};
+  } else {
+    DB[active].push({id:uid(), ...data});
+  }
+  await saveDB();
+  closeModal();
+  render();
+}
+
+async function deleteEntry(){
+  if(!editingId) return;
+  if(!confirm('Delete this entry? This cannot be undone.')) return;
+  DB[active] = DB[active].filter(e=>e.id!==editingId);
+  await saveDB();
+  closeModal();
+  render();
+}
+
+/* ---- csv export ---- */
+function toCSV(rows, cat){
+  if(rows.length===0) return '';
+  const keys = Object.keys(rows[0]).filter(k=>k!=='id');
+  const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+  const lines = [keys.join(',')];
+  rows.forEach(r=> lines.push(keys.map(k=>esc(r[k])).join(',')));
+  return lines.join('\n');
+}
+function downloadCSV(content, filename){
+  const blob = new Blob([content], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ---- wire up ---- */
+document.querySelectorAll('.rail-tab').forEach(t=> t.addEventListener('click', ()=>switchTab(t.dataset.cat)));
+document.getElementById('add-btn').addEventListener('click', ()=>openModal(null));
+document.getElementById('empty-add-btn').addEventListener('click', ()=>openModal(null));
+document.getElementById('cancel-btn').addEventListener('click', closeModal);
+document.getElementById('save-btn').addEventListener('click', saveEntry);
+document.getElementById('delete-btn').addEventListener('click', deleteEntry);
+document.getElementById('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
+document.getElementById('search').addEventListener('input', (e)=>{ filters.search = e.target.value; render(); });
+document.getElementById('sort-sel').addEventListener('change', render);
+document.querySelectorAll('#region-chips .chip').forEach(c=>{
+  c.addEventListener('click', ()=>{
+    filters.region = c.dataset.region;
+    document.querySelectorAll('#region-chips .chip').forEach(x=>x.classList.toggle('on', x===c));
+    render();
+  });
+});
+document.getElementById('export-btn').addEventListener('click', ()=>{
+  const csv = toCSV(DB[active], active);
+  if(!csv){ alert('Nothing to export in this list yet.'); return; }
+  downloadCSV(csv, `ledger-${active}.csv`);
+});
+document.getElementById('export-all-btn').addEventListener('click', ()=>{
+  let combined = [];
+  Object.keys(DB).forEach(cat=> DB[cat].forEach(e=> combined.push({category:cat, ...e})));
+  const csv = toCSV(combined);
+  if(!csv){ alert('Nothing to export yet.'); return; }
+  downloadCSV(csv, `ledger-all.csv`);
+});
+
+loadDB();
+</script>
+</body>
+</html>

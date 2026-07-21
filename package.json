@@ -1,0 +1,9 @@
+{
+  "name": "the-ledger",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal contact database for post production, indie labels/management, and publishing JVs.",
+  "dependencies": {
+    "@netlify/blobs": "^8"
+  }
+}
